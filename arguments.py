@@ -11,7 +11,7 @@ def get_args():
     parser.add_argument('--num-episodes', type=int, default=50, help='the number of episodes to train the agent')
     parser.add_argument('--batch-size', type=int, default=128, help='the sample batch size for optimizing the models')
     parser.add_argument('--buffer-size', type=int, default=int(50000), help='the size of the buffer')
-    parser.add_argument('--target_update_step', type=int, default=1, help='the step when the target network should be updated')
+    parser.add_argument('--target-update-step', type=int, default=1, help='the step when the target network should be updated')
     parser.add_argument('--random-eps', type=float, default=0.1, help='random eps for action exploration')
     parser.add_argument('--gamma', type=float, default=0.99, help='the discount factor for training models')
     parser.add_argument('--lr', type=float, default=0.001, help='the learning rate of the networks')

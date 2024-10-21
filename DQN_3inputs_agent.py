@@ -24,43 +24,31 @@ class DQN(nn.Module):
         self.bn3 = nn.BatchNorm2d(32)
         self.conv4 = nn.Conv2d(32, 64, kernel_size=5, stride=2)
         self.bn4 = nn.BatchNorm2d(64)
-        self.head = nn.Linear(576, n_actions)
-        # self.saved_log_probs = []
+        self.head = nn.Linear(576*3, n_actions)
+        # self.saved_log_probs = []-
         # self.basic_rewards = []
 
-    def forward(self, x):
-        x = F.relu(self.bn1(self.conv1(x)))
-        x = F.relu(self.bn2(self.conv2(x)))
-        x = F.relu(self.bn3(self.conv3(x)))
-        x = F.relu(self.bn4(self.conv4(x)))
-        return self.head(x.view(x.size(0), -1))
+    def forward(self, x1, x2, x3):
+        x1 = F.relu(self.bn1(self.conv1(x1)))
+        x1 = F.relu(self.bn2(self.conv2(x1)))
+        x1 = F.relu(self.bn3(self.conv3(x1)))
+        x1 = F.relu(self.bn4(self.conv4(x1)))
+        x1 = x1.view(x1.size(0), -1)
 
-# class DQN1(nn.Module):
-#     def __init__(self, n_actions):
-#         super(DQN1, self).__init__()
-#         self.conv1 = nn.Conv2d(3, 16, kernel_size=5, stride=2)
-#         self.bn1 = nn.BatchNorm2d(16)
-#         self.conv2 = nn.Conv2d(16, 32, kernel_size=5, stride=2)
-#         self.bn2 = nn.BatchNorm2d(32)
-#         self.conv3 = nn.Conv2d(32, 32, kernel_size=5, stride=2)
-#         self.bn3 = nn.BatchNorm2d(32)
-#         self.conv4 = nn.Conv2d(32, 64, kernel_size=5, stride=2)
-#         self.bn4 = nn.BatchNorm2d(64)
-#         self.fc1 = nn.Linear(576, 288)
-#         self.fc2 = nn.Linear(288, 288)
-#         self.head = nn.Linear(288, n_actions)
-#         # self.saved_log_probs = []
-#         # self.basic_rewards = []
-#
-#     def forward(self, x):
-#         x = F.relu(self.bn1(self.conv1(x)))
-#         x = F.relu(self.bn2(self.conv2(x)))
-#         x = F.relu(self.bn3(self.conv3(x)))
-#         x = F.relu(self.bn4(self.conv4(x)))
-#         x = x.view(x.size(0), -1)
-#         x = F.relu(self.fc1(x))
-#         x = F.relu(self.fc2(x))
-#         return self.head(x)
+        x2 = F.relu(self.bn1(self.conv1(x2)))
+        x2 = F.relu(self.bn2(self.conv2(x2)))
+        x2 = F.relu(self.bn3(self.conv3(x2)))
+        x2 = F.relu(self.bn4(self.conv4(x2)))
+        x2 = x2.view(x2.size(0), -1)
+
+        x3 = F.relu(self.bn1(self.conv1(x3)))
+        x3 = F.relu(self.bn2(self.conv2(x3)))
+        x3 = F.relu(self.bn3(self.conv3(x3)))
+        x3 = F.relu(self.bn4(self.conv4(x3)))
+        x3 = x3.view(x3.size(0), -1)
+
+        x = torch.concatenate((x1, x2, x3))
+        return self.head(x)
 
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward'))
@@ -94,13 +82,8 @@ class DQN_agent:
 
         self.policy_net = DQN(self.n_actions)
         self.target_net = DQN(self.n_actions)
-
-        if args.load_path != None:
-            load_policy_model = torch.load(self.args.load_path, map_location=lambda storage, loc: storage)
-            self.policy_net.load_state_dict(load_policy_model)
-
         self.target_net.load_state_dict(self.policy_net.state_dict())
-        # self.target_net.eval()
+        self.target_net.eval()
 
         if self.args.cuda:
             self.policy_net.cuda()
@@ -112,7 +95,7 @@ class DQN_agent:
 
         if not os.path.exists(self.args.save_dir):
             os.mkdir(self.args.save_dir)
-        self.save_path = os.path.join(self.args.save_dir, 'DQN_complex_light')
+        self.save_path = os.path.join(self.args.save_dir, 'DQN')
         if not os.path.exists(self.save_path):
             os.mkdir(self.save_path)
 
@@ -130,11 +113,10 @@ class DQN_agent:
                 # Play a frame
                 # Variabalize 210, 160
                 obs_tensor = self._preproc_inputs(obs)
-                # if len(self.buffer) < self.args.batch_size:
-                #     action = self._select_action_random()
-                # else:
-                action = self._select_action(obs_tensor)
-                # action = self._select_action_random()
+                if t < 2:
+                    action = random.randrange(self.n_actions)
+                else:
+                    action = self._select_action(obs_tensor)
                 # print('Action selected: {}'.format(action))
                 # env.render()
                 obs_new, reward, done, info = self.env.step(action)
@@ -162,8 +144,8 @@ class DQN_agent:
 
             print('[{}] Episode {} finished. Reward total: {}'.format(datetime.now(), episode, reward_sum))
             episode_total_rewards.append(reward_sum)
-            np.save(self.save_path + '/episode_total_rewards_singledirectioncontrol_statereload.npy', episode_total_rewards)
-            torch.save(self.policy_net.state_dict(), self.save_path + '/policy_network_singledirectioncontrol_statereload.pt')
+            np.save(self.save_path + '/episode_total_rewards_standalonglinux64.npy', episode_total_rewards)
+            torch.save(self.policy_net.state_dict(), self.save_path + '/policy_network_standalonglinux64.pt')
 
 
              # Update the target network, copying all weights and biases in DQN
@@ -192,22 +174,13 @@ class DQN_agent:
         if sample > self.args.random_eps:
             with torch.no_grad():
                 Q_values = self.policy_net(state)
-                # print(Q_values)
                 # take the Q_value index with the largest expected return
-                # action_tensor = Q_values.max(1)[1].view(1, 1)
-                action_tensor = torch.argmax(Q_values)
-                # print(action_tensor)
+                action_tensor = Q_values.max(1)[1].view(1, 1)
                 action = action_tensor.detach().cpu().numpy().squeeze()
                 return action
         else:
             return random.randrange(self.n_actions)
 
-    def _select_action_random(self):
-        return random.randrange(self.n_actions)
-
-    def _select_action_inorder(self, timestep):
-        action = (timestep % (self.n_actions))
-        return action
 
     def _optimize_model(self, batch_size):
         states, actions, next_states, rewards = Transition(*zip(*self.buffer.sample(batch_size)))

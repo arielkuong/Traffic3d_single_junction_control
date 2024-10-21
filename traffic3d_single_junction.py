@@ -21,7 +21,8 @@ class Traffic3DSingleJunction:
         self.last_obs = []
 
         # setup the location to store screenshot images
-        self.images_path = os.path.join(tempfile.gettempdir(), "Traffic3D_Screenshots", datetime.now().strftime("%Y-%m-%d_%H_%M_%S_%f"))
+        # self.images_path = os.path.join(tempfile.gettempdir(), "Traffic3D_Screenshots", datetime.now().strftime("%Y-%m-%d_%H_%M_%S_%f"))
+        self.images_path = os.path.join(tempfile.gettempdir(), "Traffic3D_Screenshots", datetime.now().strftime("%Y-%m-%d_%H"))
         os.makedirs(self.images_path, exist_ok=True)
         print("Screenshots are located at: " + self.images_path)
 
@@ -42,40 +43,41 @@ class Traffic3DSingleJunction:
         (self.client_socket, address) = ss.accept()
         print("tcpConnection established")
         self._send_data(self.images_path)
-        self.max_number_of_junction_states = 4
-        # self.max_number_of_junction_states = int(self._get_data().decode('utf-8'))
-        # if self.max_number_of_junction_states == 0:
-            # raise ValueError("The Max Number of Junction States is 0. It is possible that Traffic3D "
-                             # "never sent the number in the first place or there are no Junction States in Traffic3D.")
+        # self.max_number_of_junction_states = 4
+        self.max_number_of_junction_states = int(self._get_data().decode('utf-8'))
+        if self.max_number_of_junction_states == 0:
+            raise ValueError("The Max Number of Junction States is 0. It is possible that Traffic3D "
+                             "never sent the number in the first place or there are no Junction States in Traffic3D.")
         print("Max Junction State Size: " + str(self.max_number_of_junction_states))
         self.env_timeout = 0
 
     def _receive_image(self):
         data_string = (self._get_data().decode('utf-8'))
-        print(data_string)
-        # screenshots = json.loads(data_string)
-        # screenshots = screenshots["screenshots"]
-        # screenshots = screenshots[0]
-        # img_path = os.path.join(self.images_path, screenshots["screenshotPath"])
-        img_path = os.path.join(self.images_path, data_string)
+        # print(data_string)
+        screenshots = json.loads(data_string)
+        screenshots = screenshots["screenshots"]
+        screenshots = screenshots[0]
+        img_path = os.path.join(self.images_path, screenshots["screenshotPath"])
+        # img_path = os.path.join(self.images_path, data_string)
+        # print('Receiving image...')
         img = cv2.imread(img_path)
-        print('image received from: {}'.format(img_path))
+        # print('image received from: {}'.format(img_path))
         return img
 
-    def _send_action(self, action):
-        print(action)
-        # actions = {"actions": []}
-        # action = np.array(action)
-        # action = action.tolist()
-        # actions["actions"].append({"junctionId": '1', "action": action})
-        # self._send_data(json.dumps(actions))
-        self._send_data(action)
-        print("action sent")
+    def _send_action(self, action_input):
+        # print(action)
+        actions = {"actions": []}
+        action = np.array(action_input)
+        action = action.tolist()
+        actions["actions"].append({"junctionId": '1', "action": action})
+        self._send_data(json.dumps(actions))
+        # self._send_data(action)
+        # print("action sent")
 
     def _receive_reward(self):
         data = (self._get_data().decode('utf-8'))
         data_float = float(data)
-        print('reward received: {:.2f}'.format(data_float))
+        # print('reward received: {:.2f}'.format(data_float))
         return data_float
 
     def get_action_space(self):
